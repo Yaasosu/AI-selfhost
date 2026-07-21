@@ -1,3 +1,8 @@
+<img width="1843" height="934" alt="image" src="https://github.com/user-attachments/assets/49e13fe6-ba6f-4761-bbef-f32842a587e1" />
+<img width="1838" height="926" alt="image" src="https://github.com/user-attachments/assets/01a1f2c6-119f-4f22-82e8-058c7dd7fa66" />
+
+
+
 # AI Chat Startup Guide (FastAPI + React/Vite + Caddy)
 
 This project is a lightweight chat client designed to run local AI models via **Ollama**. The entire stack is containerized using Docker and runs on top of lightweight **Alpine** Linux images.
