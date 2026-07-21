@@ -1,0 +1,14 @@
+# Игнорируем виртуальные окружения и зависимости
+**/node_modules/
+**/.venv/
+**/__pycache__/
+**/.idea/
+**/.vscode/
+**/.git/
+
+# Игнорируем локальные файлы сборки
+**/dist/
+**/.ruff_cache/
+**/.oxlintrc.json
+*.log
+.env

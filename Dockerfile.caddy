@@ -1,0 +1,23 @@
+# Этап 1: Сборка фронтенда
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app
+
+# Копируем package.json и lock-файл
+COPY frontend/package*.json ./
+RUN npm ci
+
+# Копируем исходники и собираем проект
+COPY frontend/ ./
+RUN npm run build
+
+# Этап 2: Запуск веб-сервера Caddy
+FROM caddy:alpine
+
+# Копируем конфигурационный файл Caddy
+COPY Caddyfile /etc/caddy/Caddyfile
+
+# Копируем скомпилированные статические файлы фронтенда
+COPY --from=frontend-builder /app/dist /srv
+
+EXPOSE 80
+EXPOSE 443

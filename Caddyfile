@@ -1,0 +1,26 @@
+:80 {
+    log {
+        output stdout
+    }
+
+    # Корневая папка с собранным фронтендом
+    root * /srv
+    
+    # Сжатие ответов
+    encode gzip zstd
+
+    # Принудительно задаем порядок выполнения с помощью route
+    route {
+        # Проксирование запросов к бэкенду (FastAPI)
+        reverse_proxy /users* backend:8000
+        reverse_proxy /chats* backend:8000
+        reverse_proxy /messages* backend:8000
+        reverse_proxy /docs* backend:8000
+        reverse_proxy /openapi.json* backend:8000
+        reverse_proxy /metrics* backend:8000
+
+        # Обслуживание статических файлов и SPA-роутинг
+        try_files {path} /index.html
+        file_server
+    }
+}
