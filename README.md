@@ -30,8 +30,23 @@ By default, Ollama on Linux only listens on `127.0.0.1` (localhost). To allow th
    You should see `*:11434` or `0.0.0.0:11434` instead of `127.0.0.1:11434`.
 
 ---
+### Step 2. Set-up your data base
+1. change file name from .env-test to .env
 
-### Step 2. Start the Stack via Docker Compose
+2.in file put your data
+```bash
+test_DB_HOST=
+test_DB_PORT=
+test_DB_USER=
+test_DB_PASS=
+test_DB_NAME=
+
+SECRET_KEY =
+ALGORITHM = HS256
+ACCESS_TOKEN_EXPIRE_MINUTES = 3200
+```
+---
+### Step 3. Start the Stack via Docker Compose
 
 Run the build and start all services in the background:
 ```bash
@@ -102,3 +117,11 @@ Monitoring dashboards are set up and imported automatically:
 To prevent conflicts with services that might already be running on your local machine:
 * **Redis** inside Docker does not expose port `6379` to the host. The backend container communicates with it directly inside the internal Docker network.
 * **PostgreSQL** is forwarded to port **`5433`** on the host machine (instead of the standard `5432`). If you need to connect to the database directly from PyCharm, pgAdmin, or another client, use port `5433` (username: `postgres`, password: `1`, database: `ai-slop`).
+
+---
+
+## 👥 Contributions
+
+* **Backend (FastAPI):** Built by me (exception: `send_message` endpoint).
+* **Frontend (Vite + React):** Fully vibecoded
+* **DevOps (Docker, Caddy, Grafana, Prometheus):** AI helped with configuration.
