@@ -77,7 +77,7 @@ Once successfully started, the services will be accessible at the following URLs
 | **API Documentation** | 📖 [http://localhost/docs](http://localhost/docs) | Interactive Swagger UI for testing API endpoints. |
 | **Grafana** | 📊 [http://localhost:3000](http://localhost:3000) | Metrics dashboard. Automatically logs in as Admin. |
 | **Prometheus** | ⏱️ [http://localhost:9090](http://localhost:9090) | Time-series database containing metrics. |
-
+| **adminer** | 💻 [http://localhost:8080/](http://localhost:8080/) | admin panel in browser. |
 ---
 
 ## 📊 Pre-configured Grafana Monitoring
@@ -91,6 +91,17 @@ Monitoring dashboards are set up and imported automatically:
    - Response latency from Ollama models.
    - Redis cache hits/misses and PostgreSQL database metrics.
 
+---
+## 📊 Admin-Panel settings
+
+convenient admin panel in your browser
+1. Open **Adminer** ([http://localhost:8080](http://localhost:8080)).
+2. Login using:
+   - System: PostgreSQL
+   - Server: db
+   - User: postgres
+   - Password: 1
+   - Database: ai-slop
 ---
 
 ## 🛠️ Useful Management Commands
