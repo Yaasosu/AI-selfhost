@@ -19,7 +19,7 @@ client = AsyncClient()
 
 @cache(expire=30)
 async def get_available_models() -> dict:
-    print("!!! ЗАПРОС К OLLAMA В ОБХОД КЭША !!!")
+    print("!!! FETCHING OLLAMA MODELS (BYPASS CACHE) !!!")
     try:
         response = await client.list()
         models_dict = {
@@ -29,7 +29,7 @@ async def get_available_models() -> dict:
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Не удалось получить список моделей из Ollama: {str(e)}",
+            detail=f"Failed to retrieve Ollama models: {str(e)}",
         )
 
 
@@ -41,12 +41,12 @@ async def send_message_stream(
         chat_result = await session.execute(chat_query)
         chat = chat_result.scalar_one_or_none()
         if chat is None:
-            raise HTTPException(status_code=404, detail="Чат не найден")
+            raise HTTPException(status_code=404, detail="Chat not found")
 
         user_id = int(current_user["user_id"])
         if chat.user_id != user_id:
             raise HTTPException(
-                status_code=403, detail="Нет прав на отправку сообщений в этот чат"
+                status_code=403, detail="Access denied to send messages to this chat"
             )
 
         user_msg = Message(
@@ -61,10 +61,10 @@ async def send_message_stream(
 
         models = await get_available_models()
         if str(message.ai) not in models:
-            raise HTTPException(status_code=400, detail="Неверный ID модели")
+            raise HTTPException(status_code=400, detail="Invalid model ID")
         selected_model_name = models[str(message.ai)]
 
-        # Метрика отправленного сообщения
+        # Sent message metric
         from metrics import MESSAGES_SENT_TOTAL
 
         MESSAGES_SENT_TOTAL.labels(
@@ -80,7 +80,7 @@ async def send_message_stream(
         messages_result = await session.execute(messages_query)
         db_messages = messages_result.scalars().all()
 
-        # Если это первое сообщение в чате, обновляем название чата
+        # If first message in chat, update title
         if len(db_messages) == 1:
             words = message.text.split()
             new_title = " ".join(words[:5])
@@ -97,11 +97,10 @@ async def send_message_stream(
             for msg in db_messages
         ]
 
-    # Генератор для потоковой отправки ответа
+    # Generator for streaming response
     async def generate():
-        # Сразу отправляем клиенту плашку ожидания
         init_data = json.dumps(
-            {"content": "Пожалуйста, подождите, ИИ думает..."}, ensure_ascii=False
+            {"content": "Please wait, AI is thinking..."}, ensure_ascii=False
         )
         yield f"data: {init_data}\n\n"
 
@@ -114,19 +113,16 @@ async def send_message_stream(
 
             async for chunk in response_stream:
                 if await request.is_disconnected():
-                    # Клиент разорвал соединение (нажал Стоп)
                     break
 
                 if "message" in chunk and "content" in chunk["message"]:
                     text_chunk = chunk["message"]["content"]
                     partial_reply += text_chunk
 
-                    # Упаковываем в JSON, чтобы безопасного передавать переносы строк
                     data = json.dumps({"content": text_chunk}, ensure_ascii=False)
                     yield f"data: {data}\n\n"
 
         except asyncio.CancelledError:
-            # Срабатывает при принудительной отмене
             pass
         except Exception as e:
             error_data = json.dumps({"error": str(e)}, ensure_ascii=False)
@@ -164,11 +160,11 @@ async def get_chat_history(chat_id: int, current_user: dict):
         chat = result.scalar_one_or_none()
 
         if chat is None:
-            raise HTTPException(status_code=404, detail="Чат не найден")
+            raise HTTPException(status_code=404, detail="Chat not found")
 
         if chat.user_id != user_id:
             raise HTTPException(
-                status_code=403, detail="Нет прав на просмотр истории этого чата"
+                status_code=403, detail="Access denied to view history of this chat"
             )
 
         messages_query = (
