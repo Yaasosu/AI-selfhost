@@ -74,17 +74,31 @@ const MdIconButton = ({ onClick, title, children, className = '', disabled = fal
 
 /* ─── MAIN APP ───────────────────────────────────────────── */
 export default function App() {
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved) return saved === 'dark';
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches || false;
+  });
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState('login');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
 
   const [chats, setChats] = useState([]);
-  const [activeChatId, setActiveChatId] = useState(null);
+  
+  const getInitialChatId = () => {
+    const hashMatch = window.location.hash.match(/chat=(\d+)/);
+    if (hashMatch) return Number(hashMatch[1]);
+    const saved = localStorage.getItem('activeChatId');
+    return saved ? Number(saved) : null;
+  };
+  const [activeChatId, setActiveChatId] = useState(getInitialChatId);
+
   const [messages, setMessages] = useState([]);
   const [models, setModels] = useState({});
-  const [selectedModelId, setSelectedModelId] = useState('1');
+  const [selectedModelId, setSelectedModelId] = useState(() => {
+    return localStorage.getItem('selectedModelId') || '1';
+  });
 
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -112,10 +126,46 @@ export default function App() {
     { text: 'Create a 1-week workout plan for beginners', icon: 'fitness_center' },
   ];
 
-  // Apply dark class to <html>
+  // Apply dark class to <html> and save theme preference
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark);
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
   }, [isDark]);
+
+  // Persist selected AI model
+  useEffect(() => {
+    if (selectedModelId) {
+      localStorage.setItem('selectedModelId', String(selectedModelId));
+    }
+  }, [selectedModelId]);
+
+  // Persist active chat ID & update URL hash
+  useEffect(() => {
+    if (activeChatId !== null && activeChatId !== undefined) {
+      localStorage.setItem('activeChatId', String(activeChatId));
+      if (!window.location.hash.includes(`chat=${activeChatId}`)) {
+        window.history.replaceState(null, '', `#chat=${activeChatId}`);
+      }
+    } else {
+      localStorage.removeItem('activeChatId');
+      if (window.location.hash.includes('chat=')) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    }
+  }, [activeChatId]);
+
+  // Listen to hash changes (e.g. back/forward browser buttons)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hashMatch = window.location.hash.match(/chat=(\d+)/);
+      if (hashMatch) {
+        const id = Number(hashMatch[1]);
+        setActiveChatId(id);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   useEffect(() => { checkAuth(); }, []);
   useEffect(() => { if (user) { fetchChats(); fetchModels(); } }, [user]);
@@ -147,15 +197,27 @@ export default function App() {
       });
       const data = await res.json();
       if (res.ok) {
-        if (authMode === 'register') { setAuthMode('login'); setAuthError('Registration successful! Please sign in.'); }
-        else await checkAuth();
-      } else { setAuthError(data.detail || 'Authentication error'); }
-    } catch { setAuthError('Server connection error'); }
+        if (authMode === 'register') {
+          setAuthMode('login');
+          setAuthError('Registration successful! Please sign in.');
+        } else {
+          await checkAuth();
+        }
+      } else {
+        setAuthError(data.detail || 'Authentication error');
+      }
+    } catch {
+      setAuthError('Server connection error');
+    }
   };
 
   const handleLogout = async () => {
     try { await fetch('/users/logout', { method: 'POST', credentials: 'include' }); } catch {}
     setUser(null); setChats([]); setActiveChatId(null);
+    localStorage.removeItem('activeChatId');
+    if (window.location.hash.includes('chat=')) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
   };
 
   const fetchChats = async () => {
@@ -163,8 +225,16 @@ export default function App() {
       const res = await fetch('/chats/', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
-        setChats([...data].reverse());
-        if (data.length > 0 && !activeChatId) setActiveChatId(data[data.length - 1].id);
+        const reversed = [...data].reverse();
+        setChats(reversed);
+        if (reversed.length > 0) {
+          setActiveChatId(currentId => {
+            if (currentId && reversed.some(c => c.id === currentId)) {
+              return currentId;
+            }
+            return reversed[reversed.length - 1].id;
+          });
+        }
       }
     } catch { setChatError('Failed to load chats'); }
   };
@@ -176,7 +246,13 @@ export default function App() {
         const data = await res.json();
         setModels(data);
         const keys = Object.keys(data);
-        if (keys.length > 0) setSelectedModelId(keys[0]);
+        if (keys.length > 0) {
+          setSelectedModelId(prev => {
+            const saved = localStorage.getItem('selectedModelId');
+            const target = saved || prev;
+            return keys.includes(target) ? target : keys[0];
+          });
+        }
       }
     } catch { console.error('Failed to load models'); }
   };
@@ -281,12 +357,20 @@ export default function App() {
               const data = JSON.parse(line.slice(6));
               if (data.error) throw new Error(data.error);
               const newContent = data.content || '';
-              if (isFirstChunk && newContent.startsWith('Please wait')) {
+              const isPlaceholder = (str) =>
+                str.startsWith('Пожалуйста, подождите') ||
+                str.startsWith('Please wait') ||
+                str.includes('думает');
+
+              if (isFirstChunk && isPlaceholder(newContent)) {
                 botResponseText = newContent;
               } else {
-                if (isFirstChunk || botResponseText.startsWith('Please wait')) {
-                  botResponseText = newContent; isFirstChunk = false;
-                } else { botResponseText += newContent; }
+                if (isFirstChunk || isPlaceholder(botResponseText)) {
+                  botResponseText = newContent;
+                  isFirstChunk = false;
+                } else {
+                  botResponseText += newContent;
+                }
               }
               setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, text: botResponseText } : m));
             } catch {}
@@ -297,7 +381,22 @@ export default function App() {
       fetchChats();
     } catch (err) {
       if (err.name === 'AbortError') {
-        setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, streaming: false } : m));
+        const isPlaceholder = (str) =>
+          !str ||
+          str.startsWith('Please wait') ||
+          str.startsWith('Пожалуйста, подождите') ||
+          str.includes('thinking') ||
+          str.includes('думает');
+
+        if (isPlaceholder(botResponseText)) {
+          setMessages(prev => prev.filter(m => m.id !== botMsgId));
+        } else {
+          setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, text: botResponseText, streaming: false } : m));
+        }
+        setTimeout(() => {
+          fetchChats();
+          if (chatId) fetchMessages(chatId);
+        }, 400);
       } else {
         setMessages(prev => prev.map(m => m.id === botMsgId
           ? { ...m, text: err.message || 'Network error. Please try again.', streaming: false } : m));
@@ -368,18 +467,17 @@ export default function App() {
           {/* Brand Logo & Header */}
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
             <div style={{
-              width: 64,
-              height: 64,
+              width: 56,
+              height: 56,
               borderRadius: 'var(--md-shape-xl)',
               backgroundColor: 'var(--md-sys-color-primary-container)',
-              color: 'var(--md-sys-color-on-primary-container)',
               margin: '0 auto 1.25rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               boxShadow: 'var(--md-elevation-1)',
             }}>
-              <MdIcon name="smart_toy" style={{ fontSize: '32px' }} />
+              <span className="blinking-dot-lg" />
             </div>
             <h1 style={{
               margin: 0,
@@ -423,7 +521,7 @@ export default function App() {
                   boxShadow: authMode === mode ? 'var(--md-elevation-1)' : 'none',
                 }}
               >
-                {mode === 'login' ? 'Login' : 'Sign Up'}
+                {mode === 'login' ? 'Login' : 'Register'}
               </button>
             ))}
           </div>
@@ -436,9 +534,9 @@ export default function App() {
               fontSize: '0.825rem',
               fontWeight: 500,
               marginBottom: '1.25rem',
-              backgroundColor: authError.includes('successful') ? 'var(--md-sys-color-primary-container)' : 'var(--md-sys-color-error-container)',
-              color: authError.includes('successful') ? 'var(--md-sys-color-on-primary-container)' : 'var(--md-sys-color-on-error-container)',
-              border: `1px solid ${authError.includes('successful') ? 'var(--md-sys-color-outline-variant)' : 'var(--md-sys-color-error)'}`,
+              backgroundColor: authError.toLowerCase().includes('successful') ? 'var(--md-sys-color-primary-container)' : 'var(--md-sys-color-error-container)',
+              color: authError.toLowerCase().includes('successful') ? 'var(--md-sys-color-on-primary-container)' : 'var(--md-sys-color-on-error-container)',
+              border: `1px solid ${authError.toLowerCase().includes('successful') ? 'var(--md-sys-color-outline-variant)' : 'var(--md-sys-color-error)'}`,
             }}>
               {authError}
             </div>
@@ -498,7 +596,7 @@ export default function App() {
                 fontSize: '0.95rem',
               }}
             >
-              {authMode === 'login' ? 'Login' : 'Create Account'}
+              {authMode === 'login' ? 'Sign In' : 'Register'}
             </button>
           </form>
         </div>
@@ -541,17 +639,16 @@ export default function App() {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <div style={{
-                width: 32,
-                height: 32,
+                width: 28,
+                height: 28,
                 borderRadius: 'var(--md-shape-md)',
-                backgroundColor: 'var(--md-sys-color-primary)',
-                color: 'var(--md-sys-color-on-primary)',
+                backgroundColor: 'var(--md-sys-color-primary-container)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: 'var(--md-elevation-1)',
               }}>
-                <MdIcon name="smart_toy" style={{ fontSize: '20px' }} />
+                <span className="blinking-dot" />
               </div>
               <span style={{
                 fontWeight: 800,
@@ -1041,21 +1138,14 @@ export default function App() {
                             {(() => {
                               if (!m.text) return '';
                               const parts = m.text.split(/(```[\s\S]*?```|`[^`\n]+`)/g);
-                              const mathKeywords = /\\frac|\\sqrt|\\sin|\\cos|\\tan|\\theta|\\alpha|\\beta|\\gamma|\\infty|\^|_|\\circ|\\approx|\\cdot|\\times|\\div|\\le|\\ge|\\neq|\\pm|\\to|\\pi/i;
 
                               return parts.map(part => {
                                 if (part.startsWith('`')) return part;
                                 let processed = part;
-                                processed = processed.replace(/\\\[([\s\S]*?)\\\]/g, (_, eq) => `$$\n${eq}\n$$`);
-                                processed = processed.replace(/\\\(([\s\S]*?)\\\)/g, (_, eq) => `$${eq}$`);
-                                processed = processed.replace(/\[([\s\S]*?)\]/g, (match, eq) => {
-                                  if (mathKeywords.test(eq)) return `$$\n${eq}\n$$`;
-                                  return match;
-                                });
-                                processed = processed.replace(/\(([\s\S]*?)\)/g, (match, eq) => {
-                                  if (mathKeywords.test(eq)) return `$${eq}$`;
-                                  return match;
-                                });
+                                // Convert \[ ... \] block math to $$ ... $$
+                                processed = processed.replace(/\\\[([\s\S]*?)\\\]/g, (_, eq) => `$$\n${eq.trim()}\n$$`);
+                                // Convert \( ... \) inline math to $ ... $
+                                processed = processed.replace(/\\\(([\s\S]*?)\\\)/g, (_, eq) => `$${eq.trim()}$`);
                                 return processed;
                               }).join('');
                             })()}

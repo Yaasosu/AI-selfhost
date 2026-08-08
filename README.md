@@ -34,6 +34,12 @@ By default, Ollama on Linux only listens on `127.0.0.1` (localhost). To allow th
    ```
    You should see `*:11434` or `0.0.0.0:11434` instead of `127.0.0.1:11434`.
 
+4. **Allow port 11434 in your Firewall (if UFW / firewalld is active):**
+   If UFW is active, incoming connections from Docker containers to port 11434 will be blocked by default. Allow the port:
+   ```bash
+   sudo ufw allow 11434/tcp
+   ```
+
 ---
 ### Step 2. Set-up your data base
 1. change file name from .env-test to .env
