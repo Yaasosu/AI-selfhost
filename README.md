@@ -1,7 +1,5 @@
-<img width="1843" height="934" alt="image" src="https://github.com/user-attachments/assets/49e13fe6-ba6f-4761-bbef-f32842a587e1" />
-<img width="1838" height="926" alt="image" src="https://github.com/user-attachments/assets/01a1f2c6-119f-4f22-82e8-058c7dd7fa66" />
-
-
+<img width="1816" height="976" alt="image" src="https://github.com/user-attachments/assets/e5704a69-ced4-4b18-88d5-6d3903473c8d" />
+<img width="1815" height="995" alt="image" src="https://github.com/user-attachments/assets/a3c42704-490c-4ce0-8446-b7a2b76938de" />
 
 # AI Chat Startup Guide (FastAPI + React/Vite + Caddy)
 
@@ -144,6 +142,11 @@ To prevent conflicts with services that might already be running on your local m
 
 ## 👥 Contributions
 
-* **Backend (FastAPI):** Built by me (exception: `send_message` endpoint).
+* **Backend (FastAPI):** Built by me (exception: `send_message` endpoint there AI helped with images).
 * **Frontend (Vite + React):** Fully vibecoded
 * **DevOps (Docker, Caddy, Grafana, Prometheus):** AI helped with configuration.
+
+**AI Tools & Skills Used:**
+* Gemini
+* [vercel-labs / find-skills](https://www.skills.sh/vercel-labs/skills/find-skills)
+* [mattpocock / grill-me](https://www.skills.sh/mattpocock/skills/grill-me)
