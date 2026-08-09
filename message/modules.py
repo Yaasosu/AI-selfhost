@@ -1,8 +1,10 @@
 import asyncio
 import json
+import os
 import time
+import uuid
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, UploadFile, File
 from fastapi.responses import StreamingResponse
 from fastapi_cache.decorator import cache
 from ollama import AsyncClient
@@ -182,3 +184,20 @@ async def get_chat_history(chat_id: int, current_user: dict):
         messages_result = await session.execute(messages_query)
         return messages_result.scalars().all()
 
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+async def create_upload_file(file: UploadFile):
+    #получаее расширение
+    file_ext = os.path.splitext(file.filename)[1]
+
+    unique_filename = f"{uuid.uuid4()}{file_ext}"
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+
+    content = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    return {
+        "url": f"/uploads/{unique_filename}",
+        "filename": file.filename
+    }

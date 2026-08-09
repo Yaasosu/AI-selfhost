@@ -1,6 +1,11 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, UploadFile, File
 
-from message.modules import get_available_models, get_chat_history, send_message_stream
+from message.modules import (
+    create_upload_file as process_upload_file,
+    get_available_models,
+    get_chat_history,
+    send_message_stream,
+)
 from message.scheme import MessageCreate, MessageResponse
 from user.modules import get_current_user
 
@@ -26,3 +31,8 @@ async def get_existing_chat_history(
     chat_id: int, current_user: dict = Depends(get_current_user)
 ):
     return await get_chat_history(chat_id, current_user)
+
+
+@router.post("/sendmessage/file")
+async def upload_file_endpoint(file: UploadFile = File(...)):
+    return await process_upload_file(file)

@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
+from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator, metrics
 from redis import asyncio as aioredis
 from slowapi import _rate_limit_exceeded_handler
@@ -52,6 +53,8 @@ instrumentator.instrument(app).expose(app, endpoint="/metrics")
 app.include_router(user_router)
 app.include_router(chat_router)
 app.include_router(message_router)
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 @app.get("/")
