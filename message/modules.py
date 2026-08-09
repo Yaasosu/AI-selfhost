@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import os
 import time
@@ -55,6 +56,7 @@ async def send_message_stream(
             chat_id=message.chat_id,
             sender="user",
             text=message.text,
+            file_url=message.file_url,
             created_at=int(time.time()),
             ai=message.ai,
         )
@@ -98,6 +100,15 @@ async def send_message_stream(
             }
             for msg in db_messages
         ]
+
+        if message.file_url:
+            clean_path = message.file_url.lstrip("/")
+            if os.path.exists(clean_path):
+                with open(clean_path, "rb") as f:
+                    img_b64 = base64.b64encode(f.read()).decode("utf-8")
+                    if messages_list:
+                        messages_list[-1]["images"] = [img_b64]
+
 
     # Generator for streaming response
     async def generate():
@@ -197,7 +208,10 @@ async def create_upload_file(file: UploadFile):
     with open(file_path, "wb") as f:
         f.write(content)
 
+    base64_str = base64.b64encode(content).decode("utf-8")
+
     return {
         "url": f"/uploads/{unique_filename}",
-        "filename": file.filename
+        "filename": file.filename,
+        "base64": base64_str
     }

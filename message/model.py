@@ -13,7 +13,9 @@ class Message(Base):
     )
     sender = Column(String, nullable=False)
     text = Column(String, nullable=False)
+    file_url = Column(String, nullable=True)
     created_at = Column(Integer, nullable=False)
     ai = Column(Integer, nullable=True)
+
 
     chat = relationship("Chat", back_populates="messages")

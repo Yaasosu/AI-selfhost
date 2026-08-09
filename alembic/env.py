@@ -7,7 +7,10 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 # Import database models and URL
+import chat.model
 from database import DATABASE_URL, Base
+import message.model
+import user.model
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

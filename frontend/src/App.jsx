@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import AuthScreen from './components/Auth/AuthScreen';
 import Sidebar from './components/Sidebar/Sidebar';
 import ChatArea from './components/Chat/ChatArea';
+import FilePreviewModal from './components/UI/FilePreviewModal';
 
 export default function App() {
   /* ─── THEME & AUTH STATE ─── */
@@ -33,6 +34,8 @@ export default function App() {
   });
 
   const [inputText, setInputText] = useState('');
+  const [attachedFile, setAttachedFile] = useState(null);
+  const [previewFileModal, setPreviewFileModal] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [chatError, setChatError] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -257,22 +260,69 @@ export default function App() {
     }
   };
 
+  const handleFileUpload = async (file) => {
+    if (!file) return;
+    const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+    setAttachedFile({
+      file,
+      filename: file.name,
+      url: null,
+      previewUrl,
+      isUploading: true,
+    });
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/messages/sendmessage/file', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAttachedFile((prev) =>
+          prev && prev.filename === file.name
+            ? { ...prev, url: data.url, isUploading: false }
+            : prev
+        );
+      } else {
+        setChatError('Failed to upload file');
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setAttachedFile(null);
+      }
+    } catch {
+      setChatError('Server error while uploading file');
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setAttachedFile(null);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    if (attachedFile?.previewUrl) {
+      URL.revokeObjectURL(attachedFile.previewUrl);
+    }
+    setAttachedFile(null);
+  };
+
   const handleStopGeneration = () => {
     abortControllerRef.current?.abort();
   };
 
   const handleSendMessage = async (e, textToSend = null) => {
     if (e) e.preventDefault();
-    const text = textToSend || inputText.trim();
-    if (!text || isLoading) return;
+    const text = textToSend !== null ? textToSend : inputText.trim();
+    if ((!text && !attachedFile) || isLoading) return;
+    if (attachedFile?.isUploading) return;
 
     let chatId = activeChatId;
     if (!chatId) {
       try {
+        const titleText = text || attachedFile?.filename || 'New Chat';
         const res = await fetch('/chats/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: text.slice(0, 24) + (text.length > 24 ? '...' : '') }),
+          body: JSON.stringify({ title: titleText.slice(0, 24) + (titleText.length > 24 ? '...' : '') }),
           credentials: 'include',
         });
         if (res.ok) {
@@ -287,9 +337,14 @@ export default function App() {
       }
     }
 
+    const fileUrl = attachedFile?.url || null;
     const userMsgId = nextId();
-    setMessages((prev) => [...prev, { id: userMsgId, sender: 'user', text }]);
+    setMessages((prev) => [
+      ...prev,
+      { id: userMsgId, sender: 'user', text: text || (fileUrl ? 'Attached file' : ''), file_url: fileUrl },
+    ]);
     setInputText('');
+    setAttachedFile(null);
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     setIsLoading(true);
 
@@ -302,7 +357,12 @@ export default function App() {
       const response = await fetch('/messages/sendmessage/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text, ai: parseInt(selectedModelId) }),
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: text || (fileUrl ? 'Attached file' : ''),
+          ai: parseInt(selectedModelId),
+          file_url: fileUrl,
+        }),
         credentials: 'include',
         signal: abortControllerRef.current.signal,
       });
@@ -482,7 +542,19 @@ export default function App() {
         handleInputKeyDown={handleInputKeyDown}
         handleSendMessage={handleSendMessage}
         handleStopGeneration={handleStopGeneration}
+        attachedFile={attachedFile}
+        onFileUpload={handleFileUpload}
+        onRemoveFile={handleRemoveFile}
+        onOpenPreview={(file) => setPreviewFileModal(file)}
       />
+
+      {/* File Preview Modal Lightbox */}
+      {previewFileModal && (
+        <FilePreviewModal
+          file={previewFileModal}
+          onClose={() => setPreviewFileModal(null)}
+        />
+      )}
 
       {/* Dynamic CSS rule for drawer chat item delete button hover */}
       <style>{`

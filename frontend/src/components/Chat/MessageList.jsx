@@ -12,6 +12,7 @@ export default function MessageList({
   onCopyText,
   onSuggestionClick,
   messagesEndRef,
+  onOpenPreview,
 }) {
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '2rem 0' }}>
@@ -35,6 +36,7 @@ export default function MessageList({
               userName={userName}
               copiedId={copiedId}
               onCopyText={onCopyText}
+              onOpenPreview={onOpenPreview}
             />
           ))
         )}

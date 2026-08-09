@@ -18,5 +18,6 @@ COPY . .
 # Экспонируем порт бэкенда
 EXPOSE 8000
 
-# Запускаем миграции Alembic и запускаем сервер Uvicorn
-CMD ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000"]
+# Запускаем миграции Alembic и запускаем сервер Gunicorn с воркерами Uvicorn
+CMD ["sh", "-c", "alembic upgrade head && gunicorn main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"]
+

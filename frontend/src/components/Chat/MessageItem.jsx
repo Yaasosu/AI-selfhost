@@ -14,6 +14,7 @@ export default function MessageItem({
   userName,
   copiedId,
   onCopyText,
+  onOpenPreview,
 }) {
   const isUser = message.sender === 'user';
   const isAssistant = message.sender === 'assistant';
@@ -298,6 +299,135 @@ export default function MessageItem({
             </>
           )}
         </div>
+
+        {/* Attached File Display */}
+        {message.file_url && (
+          <div style={{ marginTop: '0.6rem' }}>
+            {(() => {
+              const url = message.file_url || '';
+              const cleanUrl = url.split('?')[0].split('#')[0];
+              const isImg =
+                /^data:image\//i.test(url) ||
+                /^blob:/i.test(url) ||
+                /\.(jpg|jpeg|png|webp|gif|svg|bmp|ico|heic|avif)$/i.test(cleanUrl);
+
+              if (isImg) {
+                return (
+                  <div
+                    onClick={() => onOpenPreview && onOpenPreview(message.file_url)}
+                    title="Click to preview image"
+                    style={{
+                      position: 'relative',
+                      display: 'inline-block',
+                      cursor: 'pointer',
+                      borderRadius: 'var(--md-shape-md)',
+                      overflow: 'hidden',
+                      boxShadow: 'var(--md-elevation-1)',
+                      border: '1px solid var(--md-sys-color-outline-variant)',
+                      maxWidth: '100%',
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    }}
+                  >
+                    <img
+                      src={message.file_url}
+                      alt={message.file_url.split('/').pop() || 'Attached image'}
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: 320,
+                        borderRadius: 'var(--md-shape-md)',
+                        objectFit: 'cover',
+                        display: 'block',
+                        transition: 'transform 0.2s',
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.25)',
+                        opacity: 0,
+                        transition: 'opacity 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#ffffff',
+                      }}
+                      className="image-overlay"
+                    >
+                      <MdIcon name="visibility" style={{ fontSize: '28px' }} />
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.45rem 0.8rem',
+                  backgroundColor: 'var(--md-sys-color-surface-container)',
+                  borderRadius: 'var(--md-shape-md)',
+                  color: 'var(--md-sys-color-on-surface)',
+                  fontSize: '0.85rem',
+                  fontWeight: 500,
+                  border: '1px solid var(--md-sys-color-outline-variant)',
+                }}
+              >
+                <div
+                  onClick={() => onOpenPreview && onOpenPreview(message.file_url)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <MdIcon name="insert_drive_file" style={{ fontSize: '20px', color: 'var(--md-sys-color-primary)' }} />
+                  <span style={{ fontWeight: 600 }}>{message.file_url.split('/').pop()}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onOpenPreview && onOpenPreview(message.file_url)}
+                  title="View file"
+                  aria-label="View file"
+                  style={{
+                    border: 'none',
+                    backgroundColor: 'var(--md-sys-color-primary-container)',
+                    color: 'var(--md-sys-color-on-primary-container)',
+                    borderRadius: 'var(--md-shape-sm)',
+                    padding: '3px 8px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <MdIcon name="visibility" style={{ fontSize: '14px' }} />
+                  Preview
+                </button>
+                <a
+                  href={message.file_url}
+                  download
+                  title="Download file"
+                  aria-label="Download file"
+                  style={{
+                    color: 'var(--md-sys-color-on-surface-variant)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: 2,
+                  }}
+                >
+                  <MdIcon name="download" style={{ fontSize: '16px' }} />
+                </a>
+              </div>
+            );
+          })()}
+          </div>
+        )}
       </div>
 
       {/* User Avatar */}

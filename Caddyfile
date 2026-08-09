@@ -15,6 +15,7 @@
         reverse_proxy /users* backend:8000
         reverse_proxy /chats* backend:8000
         reverse_proxy /messages* backend:8000
+        reverse_proxy /uploads* backend:8000
         reverse_proxy /docs* backend:8000
         reverse_proxy /openapi.json* backend:8000
         reverse_proxy /metrics* backend:8000
