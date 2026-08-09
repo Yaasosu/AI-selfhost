@@ -105,7 +105,7 @@ convenient admin panel in your browser
    - Server: db
    - User: postgres
    - Password: 1
-   - Database: aiwebhost
+   - Database: ai-slop
 ---
 
 ## 🛠️ Useful Management Commands
