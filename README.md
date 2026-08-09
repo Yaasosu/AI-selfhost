@@ -91,7 +91,7 @@ Once successfully started, the services will be accessible at the following URLs
 Monitoring dashboards are set up and imported automatically:
 1. Open **Grafana** ([http://localhost:3000](http://localhost:3000)).
 2. Navigate to **Dashboards** in the left sidebar.
-3. Open the **Application** folder and select **AISLOP Chat Dashboard**.
+3. Open the **Application** folder and select **AIWEBHOST Chat Dashboard**.
 4. You will see real-time charts displaying:
    - User activity and message count.
    - Response latency from Ollama models.
@@ -107,7 +107,7 @@ convenient admin panel in your browser
    - Server: db
    - User: postgres
    - Password: 1
-   - Database: ai-slop
+   - Database: aiwebhost
 ---
 
 ## 🛠️ Useful Management Commands
@@ -138,7 +138,7 @@ convenient admin panel in your browser
 ## ⚙️ Ports Configuration Notes (For Developers)
 To prevent conflicts with services that might already be running on your local machine:
 * **Redis** inside Docker does not expose port `6379` to the host. The backend container communicates with it directly inside the internal Docker network.
-* **PostgreSQL** is forwarded to port **`5433`** on the host machine (instead of the standard `5432`). If you need to connect to the database directly from PyCharm, pgAdmin, or another client, use port `5433` (username: `postgres`, password: `1`, database: `ai-slop`).
+* **PostgreSQL** is forwarded to port **`5433`** on the host machine (instead of the standard `5432`). If you need to connect to the database directly from PyCharm, pgAdmin, or another client, use port `5433` (username: `postgres`, password: `1`, database: `aiwebhost`).
 
 ---
 
